@@ -13,6 +13,6 @@ $ cd /vagrant && mkdir app && cd app
 $ gem install rails
 $ rails new . --database=mysql
 $ rake db:create
-# Gemfileを適当にいじって以下を実行
+# node入れない場合は、Gemfileの[gem 'therubyracer']のコメントを解除して以下を実行
 $ bundle install
 ```
