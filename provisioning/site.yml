@@ -1,0 +1,74 @@
+---
+- hosts: vagrants
+  sudo: true
+  user: vagrant
+  vars: 
+    vagrant_home: "/home/vagrant" 
+  tasks:
+    # コンパイラetc
+    - name: install packages build-essential
+      apt: name=build-essential update_cache=yes
+      
+    - name: install git
+      apt: name={{ item }} update_cache=yes
+      with_items:
+        - git
+        - git-core
+        
+    - name: install dependencies for ruby
+      apt: name={{ item }} update_cache=yes
+      with_items:
+        - libssl-dev
+        - libreadline-dev
+        - zlib1g-dev
+          
+    - name: install rbenv
+      git: repo=https://github.com/sstephenson/rbenv.git
+           dest={{ vagrant_home }}/.rbenv
+           version=master
+    - name: add rbenv path to bash_profile
+      copy: src=files/rbenv.sh dest=/etc/profile.d/rbenv.sh
+      
+    - name: install ruby_build plugin for rbenv
+      git: repo=https://github.com/sstephenson/ruby-build.git
+           dest={{ vagrant_home }}/.rbenv/plugins/ruby-build
+           version=master
+           
+    - name: install ruby 2.3.0
+      shell: "export RBENV_ROOT={{ vagrant_home }}/.rbenv; export PATH=$RBENV_ROOT/bin:$PATH; echo N | rbenv install 2.3.0; rbenv global 2.3.0"
+      args:
+        creates: "{{ vagrant_home }}/.rbenv/versions/2.3.0/"
+        
+    - name: install bundler
+      shell: "{{ vagrant_home }}/.rbenv/shims/gem install bundler"
+      args:
+        creates: "{{ vagrant_home }}/.rbenv/shims/bundle"
+
+    - name: change ~/.rbenv owner to vagrant
+      file: path={{ vagrant_home }}/.rbenv state=directory owner=vagrant group=vagrant recurse=yes  
+      
+    # MySQL関連
+    - name: Install mysql
+      apt: name={{ item }} state=latest update_cache=yes
+      with_items:
+          - mysql-server-5.6
+          - python-mysqldb
+
+    - name: Set mysql service to start on boot
+      service: name=mysql state=started enabled=true
+
+    # - name: Put my-develop.cnf
+    #   template: src=my-develop.cnf dest=/etc/mysql/conf.d/my-develop.cnf backup=true mode=0644
+    #   notify: restart mysql
+
+    - name: Set the root privileges
+      mysql_user:
+          user: root
+          host: "{{ item }}"
+          password: ""
+      with_items:
+        - "%"
+        - 127.0.0.1
+        - ::1
+        - localhost    
+        
